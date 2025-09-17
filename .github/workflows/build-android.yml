@@ -5,46 +5,28 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-env:
-  FLUTTER_VERSION: "3.24.0"
-  FLUTTER_CHANNEL: "stable"
-
 jobs:
-  android:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: "3.24.0"
+          channel: "stable"
           cache: true
 
-      - name: Flutter pub get
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
-      # SOLO si hay secretos (correctamente puestos) prepara la firma
+      # --- Firma (requiere que los 4 secrets EXISTAN en el repo) ---
       - name: Prepare keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -59,20 +41,9 @@ jobs:
           storeFile=my-release-key.jks
           EOF
 
-      - name: Build APK (release, split per ABI)
-        run: flutter build apk --release --split-per-abi
+      - run: flutter build apk --release --split-per-abi
 
-      - name: Upload APKs
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/*.apk
-
-      # (Opcional) AAB
-      - name: Build AAB (release)
-        run: flutter build appbundle --release
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-aab
-          path: build/app/outputs/bundle/release/*.aab
