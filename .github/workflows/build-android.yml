@@ -17,15 +17,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Usa la MISMA versión que tienes localmente
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.0"
+          flutter-version: "3.32.7"
           channel: "stable"
           cache: true
 
-      - run: flutter pub get
+      - name: Show Flutter version
+        run: flutter --version
 
-      # --- Firma (requiere que los 4 secrets EXISTAN en el repo) ---
+      - name: Pub get
+        run: flutter pub get
+
       - name: Prepare keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -41,7 +45,8 @@ jobs:
           storeFile=my-release-key.jks
           EOF
 
-      - run: flutter build apk --release --split-per-abi
+      - name: Build APK (release)
+        run: flutter build apk --release --split-per-abi
 
       - uses: actions/upload-artifact@v4
         with:
